@@ -47,6 +47,7 @@ PANEL_Y = SCREEN_HEIGHT - PANEL_HEIGHT
 MSG_X = BAR_WIDTH + 2
 MSG_WIDTH = SCREEN_WIDTH - BAR_WIDTH - 2
 MSG_HEIGHT = PANEL_HEIGHT - 1
+INVENTORY_WIDTH = 50
 LEVEL_SCREEN_WIDTH = 40
 CHARACTER_SCREEN_WIDTH = 30
 
@@ -344,7 +345,7 @@ def make_map():
 			
 def place_objects(room):
 	#choose random number of monsters
-	max_monsters = floor(sqrt(dungeon_level))
+	max_monsters = int(math.floor(math.sqrt(dungeon_level)))
 	num_monsters = libtcod.random_get_int(0, 0, max_monsters)
 	
 	for i in range(num_monsters):
@@ -368,7 +369,7 @@ def place_objects(room):
 			objects.append(monster)
 			
 	#choose random number of items
-	max_items = floor(sqrt(sqrt(dungeon_level)))
+	max_items = int(math.floor(math.sqrt(math.sqrt(dungeon_level))))
 	num_items = libtcod.random_get_int(0, 0, max_items)
 	
 	for i in range(num_items):
@@ -505,7 +506,7 @@ def check_level_up():
 		choice = None
 		while choice == None:
 			choice = menu('Level up! Choose a stat to raise:\n',
-				['Constitution (+20 HP, from ' + str(player.fighter.mx_hp) + ')',
+				['Constitution (+20 HP, from ' + str(player.fighter.max_hp) + ')',
 				'Strength (+1 attack, from ' + str(player.fighter.power) + ')',
 				'Agility (+1 defense, from ' + str(player.fighter.defense) + ')'], LEVEL_SCREEN_WIDTH)
 		
@@ -593,8 +594,6 @@ def menu(header, options, width):
 	
 	if key.vk == libtcod.KEY_ENTER and key.lalt:  #(special case) Alt+Enter: toggle fullscreen
 		libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
-	
-	print key.c
 	
 	#convert the ASCII code to an index; if it corresponds to an option, return it
 	index = key.c - ord('a')
