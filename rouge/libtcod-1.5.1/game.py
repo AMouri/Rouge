@@ -1402,6 +1402,7 @@ def save_game():
     file['player_index'] = objects.index(player)
     file['inventory'] = inventory
     file['equipment'] = equipment
+    file['equipped'] = equipped
     file['game_msgs'] = game_msgs
     file['game_state'] = game_state
     file['stairs_index'] = objects.index(stairs)
@@ -1412,7 +1413,7 @@ def save_game():
 
 def load_game():
     #open the previously saved shelve and load the game data
-    global map, objects, player, inventory, equipment, game_msgs, game_state, stairs, dungeon_level, boss, gold
+    global map, objects, player, inventory, equipment, equipped, game_msgs, game_state, stairs, dungeon_level, boss, gold
 
     file = shelve.open('savegame', 'r')
     map = file['map']
@@ -1420,6 +1421,7 @@ def load_game():
     player = objects[file['player_index']]
     inventory = file['inventory']
     equipment = file['equipment']
+    equipped = file['equipped']
     game_msgs = file['game_msgs']
     game_state = file['game_state']
     stairs = objects[file['stairs_index']]
