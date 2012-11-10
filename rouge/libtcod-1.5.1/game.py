@@ -2,11 +2,12 @@ import libtcodpy as libtcod
 import math
 import textwrap
 import shelve
+import time
 
 #Console Variables
 SCREEN_WIDTH = 80
 SCREEN_HEIGHT = 50
-LIMIT_FPS = 30
+LIMIT_FPS = 20
 
 #Map variables
 MAP_WIDTH = 80
@@ -27,6 +28,7 @@ LEVEL_UP_BASE = 500
 LEVEL_UP_FACTOR = 250
 
 HEAL_AMOUNT = 10
+RESTORE_AMOUNT = 30
 LIGHTNING_DAMAGE = 20
 LIGHTNING_RANGE = 5
 CONFUSED_NUM_TURNS = 5
@@ -198,15 +200,20 @@ class Fighter:
         if self.hp > self.max_hp:
             self.hp = self.max_hp
 
+    def restore(self, amount):
+        self.mana += amount
+        if self.mana > self.max_mana:
+            self.mana = self.max_mana
+
 def Skills_levels():
     global skill1, skill2, skill3, skill4
     skill1 = skill2 = skill3 = skill4 = 1
     Born_of_the_wild()
 
 def Born_of_the_wild():
-    player.fighter.power += 1 * skill1
-    player.fighter.defense += 1 * skill1
-    player.fighter.max_hp += 5 * skill1
+    player.fighter.power += .2 * skill1
+    player.fighter.defense += .2 * skill1
+    player.fighter.max_hp += 1 * skill1
 
 def Licking_wounds():
     if player.fighter.mana < 25:
@@ -214,7 +221,7 @@ def Licking_wounds():
         return 'cancelled'
     else:
         player.fighter.mana -= 25
-        player.fighter.hp += skill2 * player.fighter.max_hp / 100
+        player.fighter.hp += skill2 * 4 * player.fighter.max_hp / 100
         message('Licking wounds was super effective!', libtcod.light_green)
 
 def Primal_surge():
@@ -227,8 +234,8 @@ def Primal_surge():
             message('No enemy is close enough to strike.', libtcod.red)
             return 'cancelled'
         else:
-            message('Being on the recieving end of 1,000 years of anger, ' + monster.name + ' takes ' + str(skill3 * 5) + ' hit points.', libtcod.light_blue)
-            monster.fighter.take_damage(skill3 * 5)
+            message('Being on the recieving end of 1,000 years of anger, ' + monster.name + ' takes ' + str(skill3 * 8) + ' hit points.', libtcod.light_blue)
+            monster.fighter.take_damage(skill3 * 8)
 
 def The_last_stand():
     if player.fighter.hp == 1:
@@ -240,7 +247,7 @@ def The_last_stand():
         message('The last stand deals damage in a ' + str(FIREBALL_RADIUS) + ' tiles!', libtcod.pink)
         for obj in objects: #damage every fighter in range, including player
             if obj.distance(x, y) <= 3 and obj.fighter:
-                message('The ' + obj.name + ' gets obliterated for ' + str(1.05 ** skill4 * player.fighter.max_hp) + ' hit points.', libtcod.darker_pink)
+                message('The ' + obj.name + ' gets obliterated for ' + str(.05 * skill4 * player.fighter.max_hp) + ' hit points.', libtcod.darker_pink)
                 obj.fighter.take_damage(.05 * skill4 * player.fighter.max_hp)
         player.fighter.hp = 1
 
@@ -490,27 +497,6 @@ def make_map():
             fighter_component = Fighter(hp = 25, defense = 2, power = 6, xp = 200, death_function = monster_death, boss = boss)
             ai_component = BasicMonster()
             monster = Object(new_x, new_y, 'm', 'miniboss', libtcod.red, blocks = True, fighter = fighter_component, ai = ai_component)
-            equip = libtcod(0, 0, 100)
-            if equip <= 100:
-                #helmet
-                equip_component = Equipment('helmet', 1 + dungeon_level / 10, monster)
-                monster.equip = Object(x,y, 'U', 'helmet',libtcod.sepia, equip = equip_component)
-            elif equip <= 80:
-                #torso
-                equip_component = Equipment('torso', 1 + dungeon_level / 10, monster)
-                monster.equip = Object(x, y, 'T', 'torso', libtcod.sepia, equip = equip_component)
-            elif equip <= 60:
-                #leggings
-                equip_component = Equipment('leggings', 1 + dungeon_level / 10, monster)
-                monster.equip = Object(x, y, 'M', 'leggings', libtcod.sepia, equip = equip_component)
-            elif equp <= 40:
-                #boots
-                equip_component = Equipment('boots', 1 + dungeon_level / 10, monster)
-                monster.equip = Object(x, y, 'b', 'boots', libtcod.sepia, equip = equip_component)
-            elif equip <= 20:
-                #weapon
-                equip_component = Equipment('weapon', 4 + dungeon_level / 10, monster)
-                monster.equip = Object(x, y, '/', 'weapon', libtcod.sepia, equip = equip_component)
             objects.append(monster)
         elif dungeon_level % 10 == 0:
             boss = True
@@ -528,31 +514,10 @@ def place_objects(room):
         fighter_component = Fighter(hp = 100, defense = 5, power = 8, xp = 3000, death_function = monster_death, boss = boss)
         ai_component = BasicMonster()
         monster = Object(cx, cy, 'B', 'boss', libtcod.dark_red, blocks = True, fighter = fighter_component, ai = ai_component)
-        equip = libtcod(0, 0, 100)
-        if equip <= 100:
-            #helmet
-            equip_component = Equipment('helmet', 2 + dungeon_level / 10, monster)
-            monster.equip = Object(x,y, 'U', 'helmet',libtcod.sepia, equip = equip_component)
-        elif equip <= 80:
-            #torso
-            equip_component = Equipment('torso', 2 + dungeon_level / 10, monster)
-            monster.equip = Object(x, y, 'T', 'torso', libtcod.sepia, equip = equip_component)
-        elif equip <= 60:
-            #leggings
-            equip_component = Equipment('leggings', 2 + dungeon_level / 10, monster)
-            monster.equip = Object(x, y, 'M', 'leggings', libtcod.sepia, equip = equip_component)
-        elif equp <= 40:
-            #boots
-            equip_component = Equipment('boots', 2 + dungeon_level / 10, monster)
-            monster.equip = Object(x, y, 'b', 'boots', libtcod.sepia, equip = equip_component)
-        elif equip <= 20:
-            #weapon
-            equip_component = Equipment('weapon', 4 + dungeon_level / 10, monster)
-            monster.equip = Object(x, y, '/', 'weapon', libtcod.sepia, equip = equip_component)
         objects.append(monster)
     #choose random number of monsters
     max_monsters = int(math.floor(math.sqrt(dungeon_level)))
-    num_monsters = libtcod.random_get_int(0, 0, max_monsters)
+    num_monsters = libtcod.random_get_int(0, 0, max_monsters + 1)
 
     for i in range(num_monsters):
         #choose random spot for this monster
@@ -574,7 +539,7 @@ def place_objects(room):
                     monster.color = libtcod.darker_red
             elif dice < (71 - player.level * .75 - dungeon_level * .3):
                 #create a wolf
-                fighter_component = Fighter(hp = 15, defense = 1, power = 3, xp = 125, death_function = monster_death)
+                fighter_component = Fighter(hp = 15, defense = 1, power = 2, xp = 125, death_function = monster_death)
                 ai_component = BasicMonster()
                 monster = Object(x, y, 'w', 'wolf', libtcod.desaturated_green, blocks = True, fighter = fighter_component, ai = ai_component)
                 if rarity > 75:
@@ -583,7 +548,7 @@ def place_objects(room):
                     monster.color = libtcod.darker_green
             elif dice < (81 - player.level * .5 - dungeon_level * .25):
                 #create a bandit
-                fighter_component = Fighter(hp = 20, defense = 2, power = 4, xp = 175, death_function = monster_death)
+                fighter_component = Fighter(hp = 20, defense = 1, power = 3, xp = 175, death_function = monster_death)
                 ai_component = BasicMonster()
                 monster = Object(x, y, 'b', 'bandit', libtcod.desaturated_blue, blocks = True, fighter = fighter_component, ai = ai_component)
                 if rarity > 75:
@@ -592,7 +557,7 @@ def place_objects(room):
                     monster.color = libtcod.darker_blue
             elif dice < (86 - player.level * .4 - dungeon_level * .2):
                 #create a skeleton
-                fighter_component = Fighter(hp = 20, defense = 3, power = 5, xp = 250, death_function = monster_death)
+                fighter_component = Fighter(hp = 20, defense = 3, power = 4, xp = 250, death_function = monster_death)
                 ai_component = BasicMonster()
                 monster = Object(x, y, 'S', 'skeleton', libtcod.desaturated_sea, blocks = True, fighter = fighter_component, ai = ai_component)
                 if rarity > 75:
@@ -601,7 +566,7 @@ def place_objects(room):
                     monster.color = libtcod.darker_sea
             elif dice < (91 - player.level * .4 - dungeon_level * .2):
                 #create a orc
-                fighter_component = Fighter(hp = 40, defense = 4, power = 4, xp = 350, death_function = monster_death)
+                fighter_component = Fighter(hp = 40, defense = 3, power = 5, xp = 350, death_function = monster_death)
                 ai_component = BasicMonster()
                 monster = Object(x, y, 'o', 'orc', libtcod.desaturated_azure, blocks = True, fighter = fighter_component, ai = ai_component)
                 if rarity > 75:
@@ -610,7 +575,7 @@ def place_objects(room):
                     monster.color = libtcod.darker_azure
             elif dice < (94 - player.level * .3 - dungeon_level * .15):
                 #create a vampire
-                fighter_component = Fighter(hp = 30, defense = 5, power = 7, xp = 500, death_function = monster_death)
+                fighter_component = Fighter(hp = 30, defense = 5, power = 6, xp = 500, death_function = monster_death)
                 ai_component = BasicMonster()
                 monster = Object(x, y, 'V', 'vampire', libtcod.darker_red, blocks = True, fighter = fighter_component, ai = ai_component)
                 if rarity > 75:
@@ -619,7 +584,7 @@ def place_objects(room):
                     monster.color = libtcod.darker_crimson
             elif dice < (97 - player.level * .3 - dungeon_level * .15):
                 #create a werewolf
-                fighter_component = Fighter(hp = 60, defense = 6, power = 5, xp = 750, death_function = monster_death)
+                fighter_component = Fighter(hp = 60, defense = 8, power = 5, xp = 750, death_function = monster_death)
                 ai_component = BasicMonster()
                 monster = Object(x, y, 'W', 'werewolf', libtcod.darker_azure, blocks = True, fighter = fighter_component, ai = ai_component)
                 if rarity > 75:
@@ -628,7 +593,7 @@ def place_objects(room):
                     monster.color = libtcod.darker_blue
             elif dice < (99 - player.level * .2 - dungeon_level * .1):
                 #create a troll
-                fighter_component = Fighter(hp = 80, defense = 7, power = 5, xp = 1100, death_function = monster_death)
+                fighter_component = Fighter(hp = 80, defense = 8, power = 6, xp = 1100, death_function = monster_death)
                 ai_component = BasicMonster()
                 monster = Object(x, y, 'T', 'troll', libtcod.darker_green, blocks = True, fighter = fighter_component, ai = ai_component)
                 if rarity > 75:
@@ -637,7 +602,7 @@ def place_objects(room):
                     monster.color = libtcod.darker_chartreuse
             elif dice < (100 - player.level * .1 - dungeon_level * .05):
                 #create a mammoth
-                fighter_component = Fighter(hp = 100, defense = 8, power = 6, xp = 1500, death_function = monster_death)
+                fighter_component = Fighter(hp = 100, defense = 10, power = 6, xp = 1500, death_function = monster_death)
                 ai_component = BasicMonster()
                 monster = Object(x, y, 'M', 'mammoth', libtcod.black, blocks = True, fighter = fighter_component, ai = ai_component)
                 if rarity > 75:
@@ -666,9 +631,9 @@ def place_objects(room):
                 monster.fighter.power = monster.fighter.power * 2
                 monster.fighter.xp = monster.fighter.xp * 2
                 monster.name = 'elite ' + monster.name
-            monster.fighter.hp *= 1.013 ** (player.level + dungeon_level)
-            monster.fighter.defense *= 1.013 ** (player.level + dungeon_level)
-            monster.fighter.power *= 1.013 ** (player.level + dungeon_level)
+            monster.fighter.hp *= 1.013 ** (player.level + dungeon_level) + (player.level + dungeon_level) // 2.1
+            monster.fighter.defense *= 1.013 ** (player.level + dungeon_level) + (player.level + dungeon_level) // 1.3
+            monster.fighter.power *= 1.013 ** (player.level + dungeon_level) + (player.level + dungeon_level) // 4.4
             monster.fighter.xp *= 1.013 ** (player.level + dungeon_level)
             if equip > 80 and equip <= 84:
                 #helmet
@@ -693,7 +658,7 @@ def place_objects(room):
             objects.append(monster)
     #choose random number of items
     max_items = int(math.floor(math.sqrt(dungeon_level)))
-    num_items = libtcod.random_get_int(0, 0, max_items)
+    num_items = libtcod.random_get_int(0, 0, max_items + 1)
 
     for i in range(num_items):
         #choose random spot for this item
@@ -710,55 +675,73 @@ def place_objects(room):
             elif dice < 150:
                 item_component = Item(use_function = cast_heal, strength=2)
                 item = Object(x, y, '!', 'healing potion II', libtcod.pink, item = item_component)
-            elif dice < 200:
+            elif dice < 175:
                 item_component = Item(use_function = cast_heal, strength=3)
                 item = Object(x, y, '!', 'healing potion III', libtcod.darker_pink, item = item_component)
-            elif dice < 240:
+            elif dice < 225:
                 item_component = Item(use_function = cast_heal, strength=4)
                 item = Object(x, y, '~', 'restoration potion I', libtcod.desaturated_violet, item = item_component)
-            elif dice < 255:
+            elif dice < 250:
                 item_component = Item(use_function = cast_heal, strength=5)
                 item = Object(x, y, '~', 'restoration potion II', libtcod.violet, item = item_component)
             elif dice < 260:
                 item_component = Item(use_function = cast_heal, strength=6)
                 item = Object(x, y, '~', 'restoration potion III', libtcod.darker_violet, item = item_component)
             elif dice < 360:
+                item_component = Item(use_function = cast_restore, strength=1)
+                item = Object(x, y, '!', 'mana potion I', libtcod.desaturated_pink, item = item_component)
+            elif dice < 410:
+                item_component = Item(use_function = cast_restore, strength=2)
+                item = Object(x, y, '!', 'mana potion II', libtcod.pink, item = item_component)
+            elif dice < 435:
+                item_component = Item(use_function = cast_restore, strength=3)
+                item = Object(x, y, '!', 'mana potion III', libtcod.darker_pink, item = item_component)
+            elif dice < 460:
+                item_component = Item(use_function = cast_restore, strength=4)
+                item = Object(x, y, '~', 'magic potion I', libtcod.desaturated_violet, item = item_component)
+            elif dice < 475:
+                item_component = Item(use_function = cast_restore, strength=5)
+                item = Object(x, y, '~', 'magic potion II', libtcod.violet, item = item_component)
+            elif dice < 485:
+                item_component = Item(use_function = cast_restore, strength=6)
+                item = Object(x, y, '~', 'magic potion III', libtcod.darker_violet, item = item_component)
+            elif dice < 585:
                 #create a  lightning bolt scroll
                 item_component = Item(use_function = cast_lightning, strength=1)
                 item = Object(x, y, '#', 'scroll of lightning bolt I', libtcod.light_yellow, item = item_component)
-            elif dice < 410:
+            elif dice < 635:
                 #create a  lightning bolt scroll
                 item_component = Item(use_function = cast_lightning, strength=2)
                 item = Object(x, y, '#', 'scroll of lightning bolt II', libtcod.light_yellow, item = item_component)
-            elif dice < 450:
+            elif dice < 660:
                 #create a  lightning bolt scroll
                 item_component = Item(use_function = cast_lightning, strength=3)
                 item = Object(x, y, '#', 'scroll of lightning bolt III', libtcod.light_yellow, item = item_component)
-            elif dice < 480:
+            elif dice < 670:
                 #create a  lightning bolt scroll
                 item_component = Item(use_function = cast_lightning, strength=4)
                 item = Object(x, y, '#', 'scroll of lightning bolt IV', libtcod.light_yellow, item = item_component)
-            elif dice < 500:
+            elif dice < 675:
                 #create a  lightning bolt scroll
                 item_component = Item(use_function = cast_lightning, strength=5)
                 item = Object(x, y, '#', 'scroll of lightning bolt V', libtcod.light_yellow, item = item_component)
-            elif dice < 600:
+            elif dice < 775:
                 #create a fireball scroll
                 item_component = Item(use_function = cast_fireball, strength=1)
                 item = Object(x, y, '#', 'scroll of fireball I', libtcod.light_yellow, item = item_component)
-            elif dice < 650:
+            elif dice < 825:
                 #create a fireball scroll
                 item_component = Item(use_function = cast_fireball, strength=2)
                 item = Object(x, y, '#', 'scroll of fireball II', libtcod.light_yellow, item = item_component)
-            elif dice < 690:
+            elif dice < 850:
                 #create a fireball scroll
                 item_component = Item(use_function = cast_fireball, strength=3)
                 item = Object(x, y, '#', 'scroll of fireball III', libtcod.light_yellow, item = item_component)
-            elif dice < 720:
+            elif dice < 860:
                 #create a fireball scroll
                 item_component = Item(use_function = cast_fireball, strength=4)
                 item = Object(x, y, '#', 'scroll of fireball IV', libtcod.light_yellow, item = item_component)
-            elif dice < 740:
+            elif dice < 865:
                 #create a fireball scroll
                 item_component = Item(use_function = cast_fireball, strength=5)
                 item = Object(x, y, '#', 'scroll of fireball V', libtcod.light_yellow, item = item_component)
@@ -883,7 +866,8 @@ def check_level_up():
             choice = menu('Level up! Choose a stat to raise:\n',
                 ['Constitution (+20 HP, from ' + str(player.fighter.max_hp) + ')',
                 'Strength (+1 attack, from ' + str(player.fighter.power) + ')',
-                'Agility (+1 defense, from ' + str(player.fighter.defense) + ')'], LEVEL_SCREEN_WIDTH)
+                'Agility (+1 defense, from ' + str(player.fighter.defense) + ')'
+                'Intelligence (+15 Mana, from ' +str(player.fighter.max_mana) + ')'], LEVEL_SCREEN_WIDTH)
 
         if choice == 0:
             player.fighter.max_hp += 20
@@ -892,8 +876,12 @@ def check_level_up():
             player.fighter.power += 1
         elif choice == 2:
             player.fighter.defense += 1
+        elif choice == 3:
+            player.fighter.max_mana += 15
+            player.fighter.mana += 15
+        time.sleep(1)
         choices = None
-        while choices == None:
+        while choices == None and choice != None:
             choices = menu('Level up! Choose a skill to raise:\n',
                 ['Bord of the Wild (+1, from ' + str(skill1) + ')',
                 'Licking Wounds (+1, from ' + str(skill2) + ')',
@@ -1011,27 +999,27 @@ def equip_menu(header):
     if len(equipment) == 0:
         options = ['Equipment is empty.']
     else:
-        options = [item.name for item in equipment]
+        items = [(item, equipped[item].name) for item in equipped if equipped[item]]
+        options = [item.name for item in items]
 
     index = menu(header, options, INVENTORY_WIDTH)
 
     if index is None or len(equipment) == 0:
         return None
-    return equipment[index].equip
+    return equipped[items[index][0]].equip
 
 def equipped_menu(header):
     #show a menu that shows everything equipped
     if len(equipped) == 0:
         options = ['Nothing equipped']
     else:
-        items = [(item, equipped[item].name) for item in equipped if equipped[item]]
-        options = [str(item) for item in items]
+        options = [(item, equipped[item].name) for item in equipped if equipped[item]]
 
     index = menu(header, options, INVENTORY_WIDTH)
 
     if index is None or len(equipped) == 0:
         return None
-    return equipped[items[index][0]].equip
+    return equipped[options[index][0]].equip
 
 def handle_keys():
     global key;
@@ -1147,6 +1135,30 @@ def cast_heal(ver):
         message('Your wounds are no more', libtcod.darker_azure)
         player.fighter.heal(.75 * player.fighter.max_hp)
 
+def cast_restore(ver):
+    if player.fighter.mana == player.fighter.max_mana:
+        message('You are already at full mana', libtcod.blue)
+        return 'cancelled'
+    elif ver == 1:
+        message('Ahh, the magic!', libtcod.light_violet)
+        player.fighter.restore(RESTORE_AMOUNT)
+    elif ver == 2:
+        message('Mana trickling through my veins!', libtcod.violet)
+        player.fighter.restore(2 * RESTORE_AMOUNT)
+    elif ver == 3:
+        message('What is health?', libtcod.darker_violet)
+        player.fighter.restore(4 * RESTORE_AMOUNT)
+    elif ver == 4:
+        message('Slow but steady', libtcod.light_azure)
+        player.fighter.restore(.20 * player.fighter.max_mana)
+    elif ver == 5:
+        message('Drunk on mana', libtcod.azure)
+        player.fighter.restore(.50 * player.fighter.max_mana)
+    elif ver == 6:
+        message('There is no spoon', libtcod.darker_azure)
+        player.fighter.restore(.75 * player.fighter.max_mana)
+
+
 def cast_lightning(ver):
     #find closest enemy (inside a maximum range) and damage it
     monster = closest_monster(LIGHTNING_RANGE)
@@ -1236,23 +1248,23 @@ def monster_death(monster):
             gold_change += 5
         elif monster.char == 'b':
             gold_change += 10
-        elif monster_type == 'S':
+        elif monster.char == 'S':
             gold_change += 15
-        elif monster_type == 'o':
+        elif monster.char == 'o':
             gold_change += 20
-        elif monster_type == 'V':
+        elif monster.char == 'V':
             gold_change += 25
-        elif monster_type == 'W':
+        elif monster.char == 'W':
             gold_change += 30
-        elif monster_type == 'T':
+        elif monster.char == 'T':
             gold_change += 35
-        elif monster_type == 'M':
+        elif monster.char == 'M':
             gold_change += 40
-        elif monster_type == 'G':
+        elif monster.char == 'G':
             gold_change += 45
-        elif monster_type == 'm':
+        elif monster.char == 'm':
             gold_change += 90
-        elif monster_type == 'B':
+        elif monster.char == 'B':
             gold_change += 190
     message('You got ' + str(gold_change) + ' gold')
     gold += gold_change
@@ -1321,7 +1333,7 @@ def new_game():
 
     #characters
     #create object representing the player
-    fighter_component = Fighter(hp = 30, defense = 2, power = 5, xp = 0, mana = 100, death_function = player_death)
+    fighter_component = Fighter(hp = 50, defense = 2, power = 5, xp = 0, mana = 100, death_function = player_death)
     player = Object(0, 0, '@', 'player', libtcod.white, blocks = True, fighter = fighter_component)
 
     gold = 0
@@ -1411,6 +1423,7 @@ def load_game():
     stairs = objects[file['stairs_index']]
     dungeon_level = file['dungeon_level']
     boss = file['boss']
+    print game_state
     file.close()
 
     initialize_fov()
