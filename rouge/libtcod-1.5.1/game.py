@@ -323,7 +323,7 @@ class Equipment:
 
     def pick_up(self):
         #add to the player's inventory and remove from the map
-        if len(inventory) >= 26:
+        if len(equipment) >= 26:
             message('Your inventory is full, cannot pick up ' + self.owner.name + '.', libtcod.red)
         else:
             equipment.append(self.owner)
@@ -809,7 +809,6 @@ def render_all():
     render_bar(1, 1, BAR_WIDTH, 'HP', player.fighter.hp, player.fighter.max_hp, libtcod.light_red, libtcod.darker_red)
     render_bar(1, 2, BAR_WIDTH, 'Mana', player.fighter.mana, player.fighter.max_mana, libtcod.light_blue, libtcod.darker_blue)
     render_bar(1, 3, BAR_WIDTH, 'Exp', player.fighter.xp, LEVEL_UP_BASE + LEVEL_UP_FACTOR * player.level, libtcod.light_yellow, libtcod.darker_yellow)
-    print gold
     libtcod.console_print_ex(panel, 1, 5, libtcod.BKGND_NONE, libtcod.LEFT, 'Gold: ' + str(gold))
 
     #display names of objects under the mouse
@@ -999,21 +998,21 @@ def equip_menu(header):
     if len(equipment) == 0:
         options = ['Equipment is empty.']
     else:
-        items = [(item, equipped[item].name) for item in equipped if equipped[item]]
-        options = [item.name for item in items]
+        options = [str(item.name) for item in equipment]
 
     index = menu(header, options, INVENTORY_WIDTH)
 
     if index is None or len(equipment) == 0:
         return None
-    return equipped[items[index][0]].equip
+    return equipment[index].equip
 
 def equipped_menu(header):
     #show a menu that shows everything equipped
     if len(equipped) == 0:
         options = ['Nothing equipped']
     else:
-        options = [(item, equipped[item].name) for item in equipped if equipped[item]]
+        items = [(item, equipped[item].name) for item in equipped if equipped[item]]
+        options = [str(item) for item in items]
 
     index = menu(header, options, INVENTORY_WIDTH)
 
