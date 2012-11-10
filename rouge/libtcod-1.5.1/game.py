@@ -1018,7 +1018,7 @@ def equipped_menu(header):
 
     if index is None or len(equipped) == 0:
         return None
-    return equipped[options[index][0]].equip
+    return equipped[items[index][0]].equip
 
 def handle_keys():
     global key;
