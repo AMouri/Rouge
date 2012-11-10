@@ -155,13 +155,14 @@ class Fighter:
 	"""
 	combat-related properties and methods (monster, player, NPC)
 	"""
-	def __init__(self, hp, defense, power, xp, death_function = None):
+	def __init__(self, hp, defense, power, xp, death_function = None, boss = False):
 		self.max_hp = hp
 		self.hp = hp
 		self.defense = defense
 		self.power = power
 		self.xp = xp
 		self.death_function = death_function
+		self.boss = boss
 	
 	def take_damage(self, damage):
 		#apply damage if possible
@@ -275,7 +276,7 @@ def create_v_tunnel(y1, y2, x):
 		map[x][y].block_sight = False
 		
 def make_map():
-	global map, objects, stairs
+	global map, objects, stairs, boss
 	
 	#list of objects with just player
 	objects = [player, ]
@@ -285,65 +286,100 @@ def make_map():
 	rooms = []
 	num_rooms = 0
 	
-	for r in range(MAX_ROOMS):
-		#random width and height
-		w = libtcod.random_get_int(0, ROOM_MIN_SIZE, ROOM_MAX_SIZE)
-		h = libtcod.random_get_int(0, ROOM_MIN_SIZE, ROOM_MAX_SIZE)
-		
-		#random position without going out of the boundaries of the map
-		x = libtcod.random_get_int(0, 0, MAP_WIDTH - w - 1)
-		y = libtcod.random_get_int(0, 0, MAP_HEIGHT - h - 1)
-		
-		new_room = Rect(x, y, w, h)
-		
-		#run through the other rooms and see if they intersect with this one
-		failed = False
-		for other_room in rooms:
-			if new_room.intersect(other_room):
-				failed = True
-				break
-		
-		if not failed:
-			#this means there are no intersections, so this room is valid
-			
-			#"paint" it to the map's tiles
-			create_room(new_room)
-			
-			#center coordinates of new room
-			new_x, new_y = new_room.center()
-			
-			if num_rooms == 0:
-				#this is the first room, where the player starts at
-				player.x = new_x
-				player.y = new_y
-			else:
-				#all rooms after the first
-				#connect it to the previous room with a tunnel
-				
-				#center coordinates of previous room
-				prev_x, prev_y = rooms[num_rooms - 1].center()
-				
-				#draw a coint (random number that is either 0 or 1
-				if libtcod.random_get_int(0, 0, 1) == 1:
-					#first move horizontally, then vertically
-					create_h_tunnel(prev_x, new_x, prev_y)
-					create_v_tunnel(prev_y, new_y, new_x)
-				else:
-					#first move vertically, then horizontally
-					create_v_tunnel(prev_y, new_y, prev_x)
-					create_h_tunnel(prev_x, new_x, new_y)
-					
-			#finally, append the new room to the list
-			rooms.append(new_room)
-			place_objects(new_room)
-			num_rooms += 1
-			
-	#create stairs at the center of the last room
+	#boss time
+	if dungeon_level % 10 == 0:
+		boss = True
+		first_room = Rect(1, 1, MAP_WIDTH / 5, MAP_HEIGHT - 2)
+		second_room = Rect(MAP_WIDTH / 2, 1, MAP_WIDTH / 2 - 1, MAP_HEIGHT - 2)
+		create_room(first_room)
+		create_room(second_room)
+		rooms.append(first_room)
+		rooms.append(second_room)
+		player.x, player.y = first_room.center()
+		new_x, new_y = second_room.center()
+		create_h_tunnel(player.x, new_x, player.y)
+		place_objects(second_room)
+		num_rooms = 2
 	
+	else:
+		for r in range(MAX_ROOMS):
+			#random width and height
+			w = libtcod.random_get_int(0, ROOM_MIN_SIZE, ROOM_MAX_SIZE)
+			h = libtcod.random_get_int(0, ROOM_MIN_SIZE, ROOM_MAX_SIZE)
+			
+			#random position without going out of the boundaries of the map
+			x = libtcod.random_get_int(0, 0, MAP_WIDTH - w - 1)
+			y = libtcod.random_get_int(0, 0, MAP_HEIGHT - h - 1)
+			
+			new_room = Rect(x, y, w, h)
+			
+			#run through the other rooms and see if they intersect with this one
+			failed = False
+			for other_room in rooms:
+				if new_room.intersect(other_room):
+					failed = True
+					break
+			
+			if not failed:
+				#this means there are no intersections, so this room is valid
+				
+				#"paint" it to the map's tiles
+				create_room(new_room)
+				
+				#center coordinates of new room
+				new_x, new_y = new_room.center()
+				
+				if num_rooms == 0:
+					#this is the first room, where the player starts at
+					player.x = new_x
+					player.y = new_y
+				else:
+					#all rooms after the first
+					#connect it to the previous room with a tunnel
+					
+					#center coordinates of previous room
+					prev_x, prev_y = rooms[num_rooms - 1].center()
+					
+					#random number that is either 0 or 1
+					if libtcod.random_get_int(0, 0, 1) == 1:
+						#first move horizontally, then vertically
+						create_h_tunnel(prev_x, new_x, prev_y)
+						create_v_tunnel(prev_y, new_y, new_x)
+					else:
+						#first move vertically, then horizontally
+						create_v_tunnel(prev_y, new_y, prev_x)
+						create_h_tunnel(prev_x, new_x, new_y)
+						
+				#finally, append the new room to the list
+				rooms.append(new_room)
+				
+				#populate
+				place_objects(new_room)
+				num_rooms += 1
+		#boss/miniboss handling
+		boss = False
+		if dungeon_level % 5 == 0 and dungeon_level % 10 != 0:
+			boss = True
+			#create miniboss
+			fighter_component = Fighter(hp = 25, defense = 2, power = 6, xp = 200, death_function = monster_death, boss = boss)
+			ai_component = BasicMonster()
+			monster = Object(new_x, new_y, 'm', 'miniboss', libtcod.red, blocks = True, fighter = fighter_component, ai = ai_component)
+			objects.append(monster)
+		elif dungeon_level % 10 == 0:
+			boss = True
+			#create da boss
+		#create stairs at the center of the last room
 	stairs = Object(new_x, new_y, '<', 'stairs', libtcod.white, always_visible = True)
 	objects.append(stairs)
-			
+
 def place_objects(room):
+	if dungeon_level % 10 == 0:
+		#create boss
+		cx, cy = room.center()
+		fighter_component = Fighter(hp = 100, defense = 5, power = 8, xp = 300, death_function = monster_death, boss = boss)
+		ai_component = BasicMonster()
+		monster = Object(cx, cy, 'B', 'boss', libtcod.dark_red, blocks = True, fighter = fighter_component, ai = ai_component)
+		objects.append(monster)
 	#choose random number of monsters
 	max_monsters = int(math.floor(math.sqrt(dungeon_level)))
 	num_monsters = libtcod.random_get_int(0, 0, max_monsters)
@@ -655,7 +691,8 @@ def handle_keys():
 			if key_char == ',':
 				#go down stairs, if the player is on them
 				if stairs.x == player.x and stairs.y == player.y:
-					next_level()
+					if not boss:
+						next_level()
 			if key_char == 'c':
 				#show character information
 				level_up_xp = LEVEL_UP_BASE + player.level * LEVEL_UP_FACTOR
@@ -670,8 +707,13 @@ def next_level():
 	message('You take a moment to rest, and recover your strength.', libtcod.light_violet)
 	player.fighter.heal(player.fighter.max_hp / 2) #heal the player by 50%
 	
-	message('After a rare moment of peace, you descend deeper into puppies', libtcod.red)
+	message('After a rare moment of peace, you descend deeper into the lair of cute puppies and kitties', libtcod.red)
 	dungeon_level += 1
+	message('Level ' + str(dungeon_level) + '!', libtcod.light_violet)
+	if dungeon_level % 5 == 0 and dungeon_level % 10 != 0:
+		message('A chill runs down your spine', libtcod.dark_red)
+	elif dungeon_level % 10 == 0:
+		message('Oh no a boss :(', libtcod.dark_red)
 	make_map() #create new level
 	initialize_fov()
 			
@@ -745,14 +787,17 @@ def player_death(player):
 	player.color = libtcod.dark_red
 	
 def monster_death(monster):
+	global boss
 	#becomes corpse. it doesn't block, can't be attacked and doesn't move
 	message(monster.name.capitalize()  + ' is dead! You gain ' + str(monster.fighter.xp) + ' experience points.', libtcod.orange)
 	monster.char = '%'
 	monster.color = libtcod.dark_red
+	if monster.fighter.boss:
+		boss = False
 	monster.blocks = False
 	monster.fighter = None
 	monster.ai = None
-	monster.name = 'reamins of ' + monster.name
+	monster.name = 'remains of ' + monster.name
 	monster.send_to_back()
 	
 def render_bar(x, y, total_width, name, value, maximum, bar_color, back_color):
@@ -811,7 +856,7 @@ def new_game():
 	
 	#characters
 	#create object representing the player
-	fighter_component = Fighter(hp = 30, defense = 2, power = 5, xp = 0, death_function = player_death)
+	fighter_component = Fighter(hp = 300, defense = 2, power = 20, xp = 0, death_function = player_death)
 	player = Object(0, 0, '@', 'player', libtcod.white, blocks = True, fighter = fighter_component)
 	
 	player.level = 1
@@ -878,6 +923,7 @@ def save_game():
 	file['game_state'] = game_state
 	file['stairs_index'] = objects.index(stairs)
 	file['dungeon_level'] = dungeon_level
+	file['boss'] = boss
 	file.close()
 	
 def load_game():
@@ -893,6 +939,7 @@ def load_game():
 	game_state = file['game_state']
 	stairs = objects[file['stairs_index']]
 	dungeon_level = file['dungeon_level']
+	boss = file['boss']
 	print game_state
 	file.close()
 	
